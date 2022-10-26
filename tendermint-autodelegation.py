@@ -11,6 +11,7 @@ DECIMALS = 1000000
 TRANSACTION_WAIT_TIME = 10
 EXECUTABLE = "canined"
 DENOM = "ujkl"
+GAS_PRICE = "0.002ujkl"
 
 class TendermintAutodelegation():
     def __init__( self, config_file='config.ini' ):
@@ -167,7 +168,7 @@ class TendermintAutodelegation():
         '''
         Distribute the rewards from the validator and return the hash
         '''
-        child = pexpect.spawn(f"{ EXECUTABLE } tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --from {self.wallet_name} -y", timeout=10)
+        child = pexpect.spawn(f"{ EXECUTABLE } tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --gas-prices={ GAS_PRICE } --from {self.wallet_name} -y", timeout=10)
         child.expect( b'Enter keyring passphrase:' ) 
         child.sendline( self.password )   
         child.expect( pexpect.EOF )                                                                                                                                     
@@ -180,7 +181,7 @@ class TendermintAutodelegation():
         '''
         Distribute the comission for the validator and return the hash
         '''
-        child = pexpect.spawn(f"{ EXECUTABLE } tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --from {self.wallet_name} --commission -y", timeout=10)
+        child = pexpect.spawn(f"{ EXECUTABLE } tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --gas-prices={ GAS_PRICE } --from {self.wallet_name} --commission -y", timeout=10)
         child.expect( b'Enter keyring passphrase:' ) 
         child.sendline( self.password )   
         child.expect( pexpect.EOF )                                                                                                                                     
@@ -193,7 +194,7 @@ class TendermintAutodelegation():
         '''
         Delegate the amount to the validator
         '''
-        child = pexpect.spawn( f'{ EXECUTABLE } tx staking delegate { self.validator_key } { amount }{ DENOM } --from { self.wallet_name } --chain-id { self.chain_id } -y', timeout=10)
+        child = pexpect.spawn( f'{ EXECUTABLE } tx staking delegate { self.validator_key } { amount }{ DENOM } --from { self.wallet_name } --gas-prices={ GAS_PRICE } --chain-id { self.chain_id } -y', timeout=10)
         child.expect( b'Enter keyring passphrase:' ) 
         child.sendline( self.password )   
         child.expect( pexpect.EOF )                                                                                                                                     
