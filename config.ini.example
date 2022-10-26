@@ -1,4 +1,4 @@
-[IDEP]
+[CHAIN]
 chain_id = SanfordNetwork
 wallet_name = <wallet name>
 wallet_address = <wallet address>

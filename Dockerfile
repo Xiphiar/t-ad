@@ -25,7 +25,7 @@ RUN chmod +x /root/go/pkg/mod/github.com/\!cosm\!wasm/wasmvm@v1.0.0-beta4/api/li
 RUN cp -r $HOME/go/pkg/mod/github.com/\!cosm\!wasm/wasmvm@v1.0.0-beta4/api/libwasmvm.so /usr/lib/
 
 # copy install the requirements
-ADD ./idep-sanford-autodelegation.py /root/
+ADD ./tendermint-autodelegation.py /root/
 ADD ./requirements.txt /root/
 RUN pip3 install -r requirements.txt
 

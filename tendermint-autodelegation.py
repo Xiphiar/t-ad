@@ -7,10 +7,12 @@ import time
 from subprocess import Popen, PIPE
 
 # constants
-IDEP_DECIMALS = 100000000
+DECIMALS = 1000000
 TRANSACTION_WAIT_TIME = 10
+EXECUTABLE = "canined"
+DENOM = "ujkl"
 
-class IdepAutodelegation():
+class TendermintAutodelegation():
     def __init__( self, config_file='config.ini' ):
         # obtain the host name
         self.name = os.uname()[1]
@@ -18,10 +20,10 @@ class IdepAutodelegation():
         # read the config and setup the telegram
         self.read_config( config_file )
         self.setup_telegram()
-        self.setup_idep_info()
+        self.setup_chain_info()
 
         # send the hello message
-        self.send( f'Hello from IDEP Autodelegation Bot on {self.name}!' )
+        self.send( f'Hello from Tendermint Autodelegation Bot on {self.name}!' )
         
     def read_config( self, config_file ):
         '''
@@ -55,32 +57,32 @@ class IdepAutodelegation():
         else:
             self.telegram_chat_id = None
 
-    def setup_idep_info( self ):
+    def setup_chain_info( self ):
         '''
-        Setup idep info
+        Setup chain info
         '''
 
         # sleep time between delegation cycles
         if "SLEEP_TIME" in os.environ:
             self.sleep_time = int(os.environ['SLEEP_TIME'])
-        elif 'sleep_time' in self.config['IDEP']:
-            self.sleep_time = int(self.config['IDEP']['sleep_time'])
+        elif 'sleep_time' in self.config['CHAIN']:
+            self.sleep_time = int(self.config['CHAIN']['sleep_time'])
         else:
             self.sleep_time = 600
         
         # bank reserve
-        if "IDEP_RESERVE" in os.environ:
-            self.reserve = float(os.environ['IDEP_RESERVE'])
-        elif 'reserve' in self.config['IDEP']:
-            self.reserve = float(self.config['IDEP']['reserve'])
+        if "WALLET_RESERVE" in os.environ:
+            self.reserve = float(os.environ['WALLET_RESERVE'])
+        elif 'reserve' in self.config['CHAIN']:
+            self.reserve = float(self.config['CHAIN']['reserve'])
         else:
             self.reserve = 0.1000
 
         # Prompt for the password if not in environment
-        if "IDEP_PASSWORD" in os.environ:
-            self.password = os.environ['IDEP_PASSWORD']
-        elif 'password' in self.config['IDEP']:
-            self.password = self.config['IDEP']['password']
+        if "WALLET_PASSWORD" in os.environ:
+            self.password = os.environ['WALLET_PASSWORD']
+        elif 'password' in self.config['CHAIN']:
+            self.password = self.config['CHAIN']['password']
         else:
             self.password = getpass.getpass("Enter the wallet password: ")
 
@@ -88,7 +90,7 @@ class IdepAutodelegation():
         if "CHAIN_ID" in os.environ:
             self.chain_id = os.environ['CHAIN_ID']
         else:
-            self.chain_id = self.config['IDEP']['chain_id']
+            self.chain_id = self.config['CHAIN']['chain_id']
 
         # wallet name
         if "WALLET_NAME" in os.environ:
@@ -96,29 +98,29 @@ class IdepAutodelegation():
         elif "WALLETNAME" in os.environ:
             self.wallet_name = os.environ['WALLETNAME']
         else:
-            self.wallet_name = self.config['IDEP']['wallet_name']
+            self.wallet_name = self.config['CHAIN']['wallet_name']
         
         # wallet and validator keys
         if "WALLET_KEY" in os.environ:
             self.wallet_key = os.environ['WALLET_KEY']
-        elif 'wallet_key' in self.config['IDEP']:
-            self.wallet_key = self.config['IDEP']['wallet_key']
+        elif 'wallet_key' in self.config['CHAIN']:
+            self.wallet_key = self.config['CHAIN']['wallet_key']
         elif "WALLET_ADDRESS" in os.environ:
             self.wallet_key = os.environ['WALLET_ADDRESS']
-        elif 'wallet_address' in self.config['IDEP']:
-            self.wallet_key = self.config['IDEP']['wallet_address']
+        elif 'wallet_address' in self.config['CHAIN']:
+            self.wallet_key = self.config['CHAIN']['wallet_address']
         else:
             print('Unable to find the wallet address in the configuration file. Exiting...')
             exit()
 
         if "VALIDATOR_KEY" in os.environ:
             self.validator_key = os.environ['VALIDATOR_KEY']
-        elif 'validator_key' in self.config['IDEP']:
-            self.validator_key = self.config['IDEP']['validator_key']
+        elif 'validator_key' in self.config['CHAIN']:
+            self.validator_key = self.config['CHAIN']['validator_key']
         elif "VALIDATOR_ADDRESS" in os.environ:
             self.validator_key = os.environ['VALIDATOR_ADDRESS']
-        elif 'validator_address' in self.config['IDEP']:
-            self.validator_key = self.config['IDEP']['validator_address']
+        elif 'validator_address' in self.config['CHAIN']:
+            self.validator_key = self.config['CHAIN']['validator_address']
         else:
             print('Unable to find the validator address in the configuration file. Exiting...')
             exit()
@@ -143,19 +145,19 @@ class IdepAutodelegation():
         '''
         return the share to decimal conversion
         '''
-        return float( shares ) * ( 1/IDEP_DECIMALS )
+        return float( shares ) * ( 1/DECIMALS )
 
     def decimal_to_shares( self, amount ):
         '''
         return the decimal to shares conversion
         '''
-        return int( amount * IDEP_DECIMALS )
+        return int( amount * DECIMALS )
 
     def get_balance( self ):
         '''
-        Obtain the IDEP balance
+        Obtain the wallet balance
         '''
-        proc = Popen([ f"iond q bank balances {self.wallet_key}" ], stdout=PIPE, shell=True)
+        proc = Popen([ f"{ EXECUTABLE } q bank balances {self.wallet_key}" ], stdout=PIPE, shell=True)
         (out, err) = proc.communicate()
         line = self.parse_subprocess( out, 'amount' )
         balance = line.split('"')[1]
@@ -165,7 +167,7 @@ class IdepAutodelegation():
         '''
         Distribute the rewards from the validator and return the hash
         '''
-        child = pexpect.spawn(f"iond tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --from {self.wallet_name} -y", timeout=10)
+        child = pexpect.spawn(f"{ EXECUTABLE } tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --from {self.wallet_name} -y", timeout=10)
         child.expect( b'Enter keyring passphrase:' ) 
         child.sendline( self.password )   
         child.expect( pexpect.EOF )                                                                                                                                     
@@ -178,7 +180,7 @@ class IdepAutodelegation():
         '''
         Distribute the comission for the validator and return the hash
         '''
-        child = pexpect.spawn(f"iond tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --from {self.wallet_name} --commission -y", timeout=10)
+        child = pexpect.spawn(f"{ EXECUTABLE } tx distribution withdraw-rewards { self.validator_key } --chain-id={ self.chain_id } --from {self.wallet_name} --commission -y", timeout=10)
         child.expect( b'Enter keyring passphrase:' ) 
         child.sendline( self.password )   
         child.expect( pexpect.EOF )                                                                                                                                     
@@ -191,7 +193,7 @@ class IdepAutodelegation():
         '''
         Delegate the amount to the validator
         '''
-        child = pexpect.spawn( f'iond tx staking delegate { self.validator_key } { amount }idep --from { self.wallet_name } --chain-id { self.chain_id } -y', timeout=10)
+        child = pexpect.spawn( f'{ EXECUTABLE } tx staking delegate { self.validator_key } { amount }{ DENOM } --from { self.wallet_name } --chain-id { self.chain_id } -y', timeout=10)
         child.expect( b'Enter keyring passphrase:' ) 
         child.sendline( self.password )   
         child.expect( pexpect.EOF )                                                                                                                                     
@@ -204,7 +206,7 @@ class IdepAutodelegation():
         '''
         Obtain the delegation amount for the validator
         '''
-        proc = Popen([ f"iond q staking delegations-to {self.validator_key} --chain-id={self.chain_id}" ], stdout=PIPE, shell=True)
+        proc = Popen([ f"{ EXECUTABLE } q staking delegations-to {self.validator_key} --chain-id={self.chain_id}" ], stdout=PIPE, shell=True)
         (out, err) = proc.communicate()
         line = self.parse_subprocess( out, 'shares' )
         balance = self.shares_to_decimal( line.split('"')[1].split(".")[0]) 
@@ -258,8 +260,8 @@ def parse_arguments( ):
 args = parse_arguments()
 
 # Create the object
-idep_bot = IdepAutodelegation( args.config )
+chain_bot = TendermintAutodelegation( args.config )
 
 # run periodic delegation cycle
 while True:
-    idep_bot.delegation_cycle()
+    chain_bot.delegation_cycle()
